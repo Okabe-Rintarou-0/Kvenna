@@ -1,10 +1,12 @@
+mod server;
 mod skiplist;
 
-use argparse::{ArgumentParser, StoreTrue};
-use skiplist::helper;
 use std::io;
 
-use crate::skiplist::SkipList;
+use argparse::{ArgumentParser, Store, StoreTrue};
+use skiplist::helper;
+
+use crate::{server::Server, skiplist::SkipList};
 
 fn print_value(value: Option<Vec<u8>>) {
     match value {
@@ -49,10 +51,16 @@ fn interact(skiplist: &mut SkipList) {
 
 struct Options {
     pub interactive: bool,
+    pub host: String,
+    pub port: u16,
 }
 
 fn main() {
-    let mut opt = Options { interactive: false };
+    let mut opt = Options {
+        interactive: false,
+        host: "127.0.0.1".to_string(),
+        port: 5000,
+    };
     {
         let mut ap = ArgumentParser::new();
         ap.set_description("Kevanna server");
@@ -61,6 +69,10 @@ fn main() {
             StoreTrue,
             "Interactive mode",
         );
+        ap.refer(&mut opt.host)
+            .add_option(&["-h", "--host"], Store, "Server host");
+        ap.refer(&mut opt.port)
+            .add_option(&["-p", "--port"], Store, "Server port");
         ap.parse_args_or_exit();
     }
 
@@ -70,4 +82,9 @@ fn main() {
             interact(&mut skip_list);
         }
     }
+
+    let addr = format!("{}:{}", opt.host, opt.port);
+    println!("Server is running on {}", addr);
+    let mut server = Server::new();
+    server.run(&addr);
 }

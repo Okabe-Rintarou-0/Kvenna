@@ -1,3 +1,5 @@
+#![allow(dead_code)]
+
 use std::{
     cell::RefCell,
     ops::{Deref, DerefMut},
@@ -103,7 +105,6 @@ impl SkipList {
         s
     }
 
-    #[allow(dead_code)]
     pub fn size(&self) -> usize {
         self.size
     }
