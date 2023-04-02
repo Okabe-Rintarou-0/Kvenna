@@ -1,4 +1,4 @@
-#[derive(Debug, PartialEq, Eq)]
+#[derive(Debug, PartialEq, Eq, Copy, Clone)]
 pub enum Method {
     Get,
     Post,
@@ -10,11 +10,23 @@ pub enum Method {
 impl From<&str> for Method {
     fn from(value: &str) -> Self {
         match value {
-            "Get" => Method::Get,
-            "Post" => Method::Post,
-            "Put" => Method::Put,
-            "Delete" => Method::Delete,
+            "GET" => Method::Get,
+            "POST" => Method::Post,
+            "PUT" => Method::Put,
+            "DELETE" => Method::Delete,
             _ => Method::Unsupported,
+        }
+    }
+}
+
+impl Into<&str> for Method {
+    fn into(self) -> &'static str {
+        match self {
+            Method::Get => "GET",
+            Method::Post => "POST",
+            Method::Put => "PUT",
+            Method::Delete => "DELETE",
+            Method::Unsupported => "UNSUPPORTED",
         }
     }
 }

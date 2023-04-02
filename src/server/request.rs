@@ -1,7 +1,7 @@
 #![allow(dead_code)]
 
 use std::{
-    borrow::{Borrow, BorrowMut},
+    borrow::BorrowMut,
     io::{BufRead, BufReader, Read},
     net::TcpStream,
 };
@@ -22,8 +22,8 @@ impl Url {
         Self { raw }
     }
 
-    pub fn get_raw(&self) -> &str {
-        self.raw.borrow()
+    pub fn get_raw(&self) -> String {
+        self.raw.to_string()
     }
 }
 

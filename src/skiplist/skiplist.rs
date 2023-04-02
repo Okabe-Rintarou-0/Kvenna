@@ -26,6 +26,8 @@ pub struct SkipList {
     empty_value: ValueType,
 }
 
+unsafe impl Send for SkipList {}
+
 impl SkipList {
     fn top_level(&self) -> NonNull<SkipNode> {
         self.level_heads.last().copied().unwrap()
@@ -121,16 +123,20 @@ impl SkipList {
         }
     }
 
-    pub fn put(&mut self, key: String, value: Vec<u8>) {
+    pub fn put(&mut self, key: &str, value: &[u8]) {
         let result = self.search(&key);
         match result {
             SearchResult::InsertPath(path) => self.grow_up(
                 path,
-                Arc::new(RefCell::new(key)),
-                Arc::new(RefCell::new(Some(value))),
+                Arc::new(RefCell::new(key.to_string())),
+                Arc::new(RefCell::new(Some(value.to_vec()))),
             ),
-            SearchResult::Exists(node) => Self::update(node, value),
+            SearchResult::Exists(node) => Self::update(node, value.to_vec()),
         }
+    }
+
+    pub fn put_string(&mut self, key: &str, value: &str) {
+        self.put(key, value.as_bytes());
     }
 
     pub fn get(&self, key: &str) -> Option<Vec<u8>> {
@@ -141,6 +147,11 @@ impl SkipList {
                 value
             }
         }
+    }
+
+    pub fn get_string(&self, key: &str) -> Option<String> {
+        self.get(key)
+            .map(|val| String::from_utf8_lossy(&val).to_string())
     }
 
     pub fn del(&self, key: &str) -> Option<Vec<u8>> {

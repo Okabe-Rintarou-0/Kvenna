@@ -1,12 +1,18 @@
+mod kvenna;
 mod server;
 mod skiplist;
 
-use std::io;
+use std::{
+    borrow::{Borrow, BorrowMut},
+    cell::RefCell,
+    io,
+    sync::{Arc, Mutex},
+};
 
 use argparse::{ArgumentParser, Store, StoreTrue};
 use skiplist::helper;
 
-use crate::{server::Server, skiplist::SkipList};
+use crate::{kvenna::Kvenna, server::Server, skiplist::SkipList};
 
 fn print_value(value: Option<Vec<u8>>) {
     match value {
@@ -33,7 +39,7 @@ fn interact(skiplist: &mut SkipList) {
             }
             "put" => {
                 if n == 3 {
-                    skiplist.put(parts[1].to_string(), parts[2].into());
+                    skiplist.put_string(parts[1], parts[2]);
                     println!("ok");
                 }
             }
@@ -76,15 +82,24 @@ fn main() {
         ap.parse_args_or_exit();
     }
 
-    let mut skip_list = SkipList::new();
     if opt.interactive {
         loop {
-            interact(&mut skip_list);
+            interact(&mut SkipList::new());
         }
     }
 
     let addr = format!("{}:{}", opt.host, opt.port);
     println!("Server is running on {}", addr);
+    let kv_store = Arc::new(Mutex::new(Kvenna::new()));
     let mut server = Server::new();
+    let cloned = kv_store.clone();
+    server.bind_get("/", move |c| {
+        c.write_text(&cloned.lock().unwrap().get_string("test").unwrap());
+    });
+    let cloned = kv_store.clone();
+    server.bind_put("/", move |c| {
+        kv_store.lock().unwrap().put_string("test", "test_value");
+        c.write_text("ok");
+    });
     server.run(&addr);
 }

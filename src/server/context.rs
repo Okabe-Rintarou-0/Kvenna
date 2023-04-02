@@ -14,6 +14,10 @@ impl<'a> Context<'a> {
         Context { req, res, stream }
     }
 
+    pub fn status(&mut self, status: u32) {
+        self.res.status(status);
+    }
+
     pub fn write_text(&mut self, text: &str) -> io::Result<()> {
         self.res
             .add_header(headers::CONTENT_TYPE, headers::CONTENT_TEXT_HTML)
