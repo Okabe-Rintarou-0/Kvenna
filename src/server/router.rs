@@ -1,36 +1,19 @@
 #![allow(dead_code)]
 
-use std::{collections::HashMap, error, fmt};
+use std::collections::HashMap;
 
-use super::{method::Method, Context};
+use super::{
+    errors::{self, ServerError},
+    method::Method,
+    Context,
+};
+
+pub type HandleResult = errors::Result<()>;
+pub type HandlerFunc = dyn Fn(&mut Context) -> HandleResult + Send + 'static;
+pub type BoxedHandlerFunc = Box<HandlerFunc>;
 
 pub struct Router {
-    route_map: HashMap<String, Box<dyn Fn(&mut Context) + Send + 'static>>,
-}
-
-#[derive(Debug, Clone)]
-pub struct RouteError {
-    url: String,
-}
-
-impl RouteError {
-    pub fn new(url: &str) -> Self {
-        Self {
-            url: url.to_string(),
-        }
-    }
-}
-
-impl fmt::Display for RouteError {
-    fn fmt(&self, f: &mut fmt::Formatter) -> fmt::Result {
-        write!(f, "route url {} is not configured", self.url)
-    }
-}
-
-impl error::Error for RouteError {
-    fn source(&self) -> Option<&(dyn error::Error + 'static)> {
-        None
-    }
+    route_map: HashMap<String, BoxedHandlerFunc>,
 }
 
 impl Router {
@@ -47,7 +30,7 @@ impl Router {
 
     pub fn bind<F>(&mut self, url: &str, method: Method, handler: F) -> &mut Self
     where
-        F: Fn(&mut Context) + Send + 'static,
+        F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         let key = Self::url_with_method(url, method);
         self.route_map.insert(key, Box::new(handler));
@@ -56,28 +39,28 @@ impl Router {
 
     pub fn bind_get<F>(&mut self, url: &str, handler: F) -> &mut Self
     where
-        F: Fn(&mut Context) + Send + 'static,
+        F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.bind(url, Method::Get, handler)
     }
 
     pub fn bind_put<F>(&mut self, url: &str, handler: F) -> &mut Self
     where
-        F: Fn(&mut Context) + Send + 'static,
+        F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.bind(url, Method::Put, handler)
     }
 
     pub fn bind_post<F>(&mut self, url: &str, handler: F) -> &mut Self
     where
-        F: Fn(&mut Context) + Send + 'static,
+        F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.bind(url, Method::Post, handler)
     }
 
     pub fn bind_delete<F>(&mut self, url: &str, handler: F) -> &mut Self
     where
-        F: Fn(&mut Context) + Send + 'static,
+        F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.bind(url, Method::Delete, handler)
     }
@@ -87,14 +70,14 @@ impl Router {
         url: &str,
         method: Method,
         context: &mut Context,
-    ) -> Result<(), RouteError> {
+    ) -> Result<(), ServerError> {
         let key = Self::url_with_method(url, method);
         match self.route_map.get_mut(&key) {
             Some(handler) => {
-                handler(context);
+                handler(context)?;
                 Ok(())
             }
-            None => Err(RouteError::new(url)),
+            None => Err(ServerError::RouteError(url.to_string())),
         }
     }
 }

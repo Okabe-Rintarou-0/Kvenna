@@ -1,4 +1,5 @@
 pub mod context;
+pub mod errors;
 pub mod headers;
 pub mod method;
 pub mod request;
@@ -13,6 +14,6 @@ pub use context::Context;
 pub use method::Method;
 pub use request::HttpRequest;
 pub use response::HttpResponse;
-pub use router::{RouteError, Router};
+pub use router::Router;
 pub use server::Server;
 pub use thread::ThreadPool;

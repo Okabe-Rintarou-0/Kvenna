@@ -1,10 +1,9 @@
 use std::{
-    io,
     net::{TcpListener, TcpStream},
     sync::{Arc, Mutex},
 };
 
-use super::{request, Context, HttpResponse, Router, ThreadPool};
+use super::{request, router::HandleResult, Context, HttpResponse, Router, ThreadPool, errors};
 
 pub struct Server {
     thread_pool: ThreadPool,
@@ -21,29 +20,24 @@ impl Server {
 
     pub fn bind_get<F>(&mut self, url: &str, handler: F)
     where
-        F: Fn(&mut Context) + Send + 'static,
+        F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.router.lock().unwrap().bind_get(url, handler);
     }
 
     pub fn bind_put<F>(&mut self, url: &str, handler: F)
     where
-        F: Fn(&mut Context) + Send + 'static,
+        F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.router.lock().unwrap().bind_put(url, handler);
     }
 
-    fn handle_request(router: Arc<Mutex<Router>>, stream: &mut TcpStream) -> io::Result<()> {
-        let req = request::parse_request(stream);
-        if req.is_none() {
-            return Ok(());
-        }
-
-        let req = req.unwrap();
+    fn handle_request(router: Arc<Mutex<Router>>, stream: &mut TcpStream) -> errors::Result<()> {
+        let req = request::parse_request(stream)?;
         let res = HttpResponse::default();
         let (url, method) = (req.url.get_raw(), req.method);
         let mut ctx = Context::new(req, res, stream);
-        router.lock().unwrap().route(&url, method, &mut ctx);
+        router.lock().unwrap().route(&url, method, &mut ctx)?;
         let method: &str = method.into();
         println!("{} {}", method, url);
         Ok(())

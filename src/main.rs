@@ -3,8 +3,6 @@ mod server;
 mod skiplist;
 
 use std::{
-    borrow::{Borrow, BorrowMut},
-    cell::RefCell,
     io,
     sync::{Arc, Mutex},
 };
@@ -94,12 +92,13 @@ fn main() {
     let mut server = Server::new();
     let cloned = kv_store.clone();
     server.bind_get("/", move |c| {
-        c.write_text(&cloned.lock().unwrap().get_string("test").unwrap());
+        c.write_text(&cloned.lock().unwrap().get_string("test").unwrap())?;
+        Ok(())
     });
-    let cloned = kv_store.clone();
     server.bind_put("/", move |c| {
         kv_store.lock().unwrap().put_string("test", "test_value");
-        c.write_text("ok");
+        c.write_text("ok")?;
+        Ok(())
     });
     server.run(&addr);
 }
