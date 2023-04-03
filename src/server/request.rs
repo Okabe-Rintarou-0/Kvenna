@@ -2,6 +2,7 @@
 
 use std::{
     borrow::BorrowMut,
+    collections::HashMap,
     io::{BufRead, BufReader, Read},
     net::TcpStream,
 };
@@ -13,24 +14,44 @@ use super::{
     version::Version,
 };
 
-#[derive(Debug)]
+pub type ParamsMap = HashMap<String, String>;
+
+#[derive(Debug, Clone)]
 pub struct Url {
     raw: String,
+    params: Option<ParamsMap>,
 }
 
 impl Url {
-    pub fn new(raw: String) -> Self {
-        Self { raw }
+    pub fn new(raw: &str) -> Self {
+        Self {
+            raw: raw.to_owned(),
+            params: None,
+        }
     }
 
-    pub fn get_raw(&self) -> String {
-        self.raw.to_string()
+    pub fn get_raw(&self) -> &str {
+        &self.raw
+    }
+
+    pub fn set_params(&mut self, params: ParamsMap) {
+        self.params = Some(params);
+    }
+
+    pub fn get_param(&self, name: &str) -> Option<&str> {
+        match self.params {
+            Some(ref params) => params.get(name).map(|s| s.as_str()),
+            None => None,
+        }
     }
 }
 
 impl Default for Url {
     fn default() -> Self {
-        Self { raw: String::new() }
+        Self {
+            raw: String::new(),
+            params: None,
+        }
     }
 }
 
@@ -58,7 +79,7 @@ pub(super) fn parse_req_line(req_line: String) -> errors::Result<(Method, Url, V
     let parts: Vec<_> = req_line.split_whitespace().collect();
     if parts.len() == 3 {
         let method: Method = parts[0].into();
-        let url = Url::new(parts[1].to_string());
+        let url = Url::new(parts[1]);
         let version: Version = parts[2].into();
         Ok((method, url, version))
     } else {

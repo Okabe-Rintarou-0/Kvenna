@@ -3,7 +3,12 @@ use std::{
     sync::{Arc, Mutex},
 };
 
-use super::{request, router::HandleResult, Context, HttpResponse, Router, ThreadPool, errors};
+use super::{
+    errors,
+    request::{self, Url},
+    router::HandleResult,
+    Context, HttpResponse, Router, ThreadPool,
+};
 
 pub struct Server {
     thread_pool: ThreadPool,
@@ -18,28 +23,28 @@ impl Server {
         }
     }
 
-    pub fn bind_get<F>(&mut self, url: &str, handler: F)
+    pub fn bind_get<F>(&mut self, url: &Url, handler: F) -> &mut Self
     where
         F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.router.lock().unwrap().bind_get(url, handler);
+        self
     }
 
-    pub fn bind_put<F>(&mut self, url: &str, handler: F)
+    pub fn bind_put<F>(&mut self, url: &Url, handler: F) -> &mut Self
     where
         F: Fn(&mut Context) -> HandleResult + Send + 'static,
     {
         self.router.lock().unwrap().bind_put(url, handler);
+        self
     }
 
     fn handle_request(router: Arc<Mutex<Router>>, stream: &mut TcpStream) -> errors::Result<()> {
         let req = request::parse_request(stream)?;
         let res = HttpResponse::default();
-        let (url, method) = (req.url.get_raw(), req.method);
+        let (url, method) = (req.url.clone(), req.method);
         let mut ctx = Context::new(req, res, stream);
         router.lock().unwrap().route(&url, method, &mut ctx)?;
-        let method: &str = method.into();
-        println!("{} {}", method, url);
         Ok(())
     }
 

@@ -10,7 +10,11 @@ use std::{
 use argparse::{ArgumentParser, Store, StoreTrue};
 use skiplist::helper;
 
-use crate::{kvenna::Kvenna, server::Server, skiplist::SkipList};
+use crate::{
+    kvenna::Kvenna,
+    server::{request::Url, Server},
+    skiplist::SkipList,
+};
 
 fn print_value(value: Option<Vec<u8>>) {
     match value {
@@ -91,14 +95,24 @@ fn main() {
     let kv_store = Arc::new(Mutex::new(Kvenna::new()));
     let mut server = Server::new();
     let cloned = kv_store.clone();
-    server.bind_get("/", move |c| {
-        c.write_text(&cloned.lock().unwrap().get_string("test").unwrap())?;
-        Ok(())
-    });
-    server.bind_put("/", move |c| {
-        kv_store.lock().unwrap().put_string("test", "test_value");
-        c.write_text("ok")?;
-        Ok(())
-    });
+    server
+        .bind_get(&Url::new("/:key"), move |c| {
+            let url = &c.req.url;
+            let key = url.get_param("key").unwrap();
+            let val = &cloned.lock().unwrap().get_string(key);
+            println!("[GET] key = {}, got value = {:?}", key, val);
+            let ret = format!("{:?}", val);
+            c.write_text(&ret)?;
+            Ok(())
+        })
+        .bind_put(&Url::new("/:key/:value"), move |c| {
+            let url = &c.req.url;
+            let key = url.get_param("key").unwrap();
+            let val = url.get_param("value").unwrap();
+            println!("[PUT] {} -> {}", key, val);
+            kv_store.lock().unwrap().put_string(key, val);
+            c.write_text("ok")?;
+            Ok(())
+        });
     server.run(&addr);
 }
