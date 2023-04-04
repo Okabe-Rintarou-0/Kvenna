@@ -1,5 +1,5 @@
 # Kvenna
-![](./imgs/logo.svg)
+![](./imgs/logo.png)
 
 Kvenna is a tiny key-value store written in Rust.
 
