@@ -1,7 +1,5 @@
 # Kvenna
-![](./imgs/logo.png)
-
-Kvenna is a tiny key-value store written in Rust.
+Kvenna is a tiny key-value store written in Rust, just for practising.
 
 ## Functions
 
